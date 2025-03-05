@@ -30,19 +30,32 @@ GLuint normalTexture, positionTexture;
 GLenum norposTexDrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
 GLuint renderBufferobject;
 
-// pd1: umbilic unsolved, pd2: umbilic solved.
-GLuint pd1FB;
-GLuint pd1Texture, pd2Texture;
+// pd: umbilic unsolved
+GLuint pdFB;
+GLuint pdTexture;
 GLuint pdVAO;
 GLuint pdQuadVBO;
 GLenum pdTexDrawBuffers[1] = {GL_COLOR_ATTACHMENT2};
+
+// umbolic solver
+
+Program usProgram;
+
+GLuint usFB;
+GLuint usTexture;
+GLenum usTexDrawBuffers[1] = {GL_COLOR_ATTACHMENT3};
+
+// smooth directions
+
+GLuint sdFB;
+GLuint sdTexture;
 
 // test
 
 Program testProgram;
 
-GLuint testVAO;
-GLuint testQuadVBO;
+GLuint quadVAO;
+GLuint quadVBO;
 
 float quadVertices[] = {
     // positions   // texCoords
@@ -212,31 +225,39 @@ void pdInit(GLFWwindow *window)
     pdProgram.loadShader("pd.vert", "pd.frag");
     glUseProgram(pdProgram.programID);
 
-    glGenFramebuffers(1, &pd1FB);
-    glBindFramebuffer(GL_FRAMEBUFFER, pd1FB);
+    glGenFramebuffers(1, &pdFB);
+    glBindFramebuffer(GL_FRAMEBUFFER, pdFB);
 
-    glGBIPTexture2D(&pd1Texture, w, h);
+    glGBIPTexture2D(&pdTexture, w, h);
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, pd1Texture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, pdTexture, 0);
     glDrawBuffers(1, pdTexDrawBuffers);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout
             << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
-    glGenVertexArrays(1, &pdVAO);
-    glBindVertexArray(pdVAO);
-
-    glGBDArrayBuffer(GL_ARRAY_BUFFER, &pdQuadVBO, 24 * sizeof(float), quadVertices);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
-
     //
     // try to solve umbolic points - uncompleted
+    //
+
+    usProgram.loadShader("umbolicSolver.vert", "umbolicSolver.frag");
+    glUseProgram(usProgram.programID);
+
+    glGenFramebuffers(1, &usFB);
+    glBindFramebuffer(GL_FRAMEBUFFER, usFB);
+
+    glGBIPTexture2D(&usTexture, w, h);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, usTexture, 0);
+    glDrawBuffers(1, usTexDrawBuffers);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout
+            << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+    //
+    // smooth direction
     //
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -244,10 +265,10 @@ void pdInit(GLFWwindow *window)
     testProgram.loadShader("test.vert", "test.frag");
     glUseProgram(testProgram.programID);
 
-    glGenVertexArrays(1, &testVAO);
-    glBindVertexArray(testVAO);
+    glGenVertexArrays(1, &quadVAO);
+    glBindVertexArray(quadVAO);
 
-    glGBDArrayBuffer(GL_ARRAY_BUFFER, &testQuadVBO, 24 * sizeof(float), quadVertices);
+    glGBDArrayBuffer(GL_ARRAY_BUFFER, &quadVBO, 24 * sizeof(float), quadVertices);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
@@ -309,9 +330,8 @@ void pdRender(GLFWwindow *window)
 
     glUseProgram(pdProgram.programID);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, pd1FB);
-    glBindVertexArray(pdVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, pdQuadVBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, pdFB);
+    glBindVertexArray(quadVAO);
 
     glViewport(0, 0, w, h);
 
@@ -341,14 +361,38 @@ void pdRender(GLFWwindow *window)
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     //
-    // test render
+    // umbolic solver render
     //
+
+    glUseProgram(usProgram.programID);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, usFB);
+    glBindVertexArray(quadVAO);
+
+    glViewport(0, 0, w, h);
+
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    GLuint pdTextureLoc = glGetUniformLocation(usProgram.programID, "pdTexture");
+    glUniform1i(pdTextureLoc, 2);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, pdTexture);
+
+    OFFSETLoc = glGetUniformLocation(usProgram.programID, "OFFSET");
+    glUniform1f(OFFSETLoc, testOffset);
+    enableCaseTestLoc = glGetUniformLocation(usProgram.programID, "enableCaseTest");
+    glUniform1i(enableCaseTestLoc, enableCaseTest);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // test render
 
     glUseProgram(testProgram.programID);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    glBindVertexArray(testVAO);
+    glBindVertexArray(quadVAO);
 
     glViewport(0, 0, w, h);
 
@@ -356,15 +400,10 @@ void pdRender(GLFWwindow *window)
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
 
-    GLuint pdTextureLoc = glGetUniformLocation(testProgram.programID, "pdTexture");
-    glUniform1i(pdTextureLoc, 2);
-    OFFSETLoc = glGetUniformLocation(testProgram.programID, "OFFSET");
-    glUniform1f(OFFSETLoc, testOffset);
-    enableCaseTestLoc = glGetUniformLocation(testProgram.programID, "enableCaseTest");
-    glUniform1i(enableCaseTestLoc, enableCaseTest);
-
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, pd1Texture);
+    GLuint testTexLoc = glGetUniformLocation(testProgram.programID, "tex");
+    glUniform1i(testTexLoc, 3);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, usTexture);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -386,14 +425,11 @@ int main()
         return -1;
     }
 
-// If MacOS
+// MacOS Setting
 #ifdef __APPLE__
-    // Get OpenGL Version 410
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    // forward compatibility: necessary for OS X
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    // set as core profile
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #endif
 
