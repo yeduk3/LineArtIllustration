@@ -23,42 +23,45 @@ void main()
 {
     vec4 pd = texture(pdTexture, texCoords);
 
+    // if umbilic,
     if (pd.w == 1)
     {
         if (enableCaseTest)
             pd = vec4(1, 1, 1, 1);
         else
         {
-            vec2 neighbor[4] = vec2[4](texCoords, texCoords, texCoords, texCoords);
-            vec2 direction[4] = vec2[4](vec2(0, OFFSET), vec2(OFFSET, 0), vec2(0, -OFFSET), vec2(-OFFSET, 0));
+            // find 4 neighboring, not umbilic, points
+            vec2 neighbor;
+            vec2 direction[4] = vec2[4](vec2(0, 0.01), vec2(0.01, 0), vec2(0, -0.01 * 10), vec2(-0.01, 0));
 
             vec4 sum = vec4(0);
             int count = 0;
             for (int i = 0; i < 4; i++)
             {
-                vec4 nTex = vec4(0);
+                neighbor = texCoords;
+                vec4 nTex = vec4(1);
                 int distByOffset = 0;
-                bool found = false;
-                while (texInRange(neighbor[i] + direction[i]))
+                while (texInRange(neighbor + direction[i]))
                 {
-                    neighbor[i] += direction[i];
-                    nTex = texture(pdTexture, neighbor[i]);
+                    neighbor += direction[i];
+                    nTex = texture(pdTexture, neighbor);
                     distByOffset++;
 
-                    if (nTex.w != 1 && abs(dot(nTex.xyz, vec3(1))) > 0.2)
-                    {
-                        found = true;
+                    // found!
+                    if (nTex.a != 1 /* && abs(dot(nTex.xyz, vec3(1))) > 0.2*/)
                         break;
-                    }
                 }
-                if (found)
+
+                // if found,
+                if (nTex.a != 1)
                 {
-                    sum += nTex;
-                    // sum = vec4(1);
-                    count += 1;
+                    sum += nTex * distByOffset;
+                    count += distByOffset;
+                    break;
                 }
             }
-            sum /= count;
+
+            sum /= float(count);
 
             pd = sum;
         }
