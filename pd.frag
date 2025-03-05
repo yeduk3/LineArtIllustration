@@ -14,6 +14,7 @@ uniform float OFFSET;
 uniform float CLOSETOZERO;
 
 // Good Value Cand //
+// TEAPOT
 // OFFSET = 0.00001;
 // CLOSETOZERO = 0.0003; or 0.0005;
 
@@ -125,7 +126,7 @@ void main()
         float k1 = 2 * A / (-B + sqrt(D));
         float k2 = 2 * A / (-B - sqrt(D));
         // make k1's curvature greater than k2's curvature
-        if (abs(k1) < abs(k2))
+        if (abs(k1) > abs(k2))
         {
             caseTest.r = 1.0;
 

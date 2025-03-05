@@ -236,7 +236,7 @@ void pdInit(GLFWwindow *window)
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
 
     //
-    // test
+    // try to solve umbolic points - uncompleted
     //
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -358,6 +358,10 @@ void pdRender(GLFWwindow *window)
 
     GLuint pdTextureLoc = glGetUniformLocation(testProgram.programID, "pdTexture");
     glUniform1i(pdTextureLoc, 2);
+    OFFSETLoc = glGetUniformLocation(testProgram.programID, "OFFSET");
+    glUniform1f(OFFSETLoc, testOffset);
+    enableCaseTestLoc = glGetUniformLocation(testProgram.programID, "enableCaseTest");
+    glUniform1i(enableCaseTestLoc, enableCaseTest);
 
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, pd1Texture);
