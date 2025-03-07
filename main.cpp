@@ -47,12 +47,17 @@ GLenum usTexDrawBuffers[1] = {GL_COLOR_ATTACHMENT3};
 
 // smooth directions
 
-GLuint sdFB;
-GLuint sdTexture;
+const int SMOOTHING_COUNT = 6;
+int sdCount = 1;
+Program sdProgram;
+GLuint sdFB[SMOOTHING_COUNT];
+GLuint sdTexture[2];
 
 // test
 
-Program testProgram;
+Program quadProgram;
+
+// quads
 
 GLuint quadVAO;
 GLuint quadVBO;
@@ -81,7 +86,7 @@ void glGBDArrayBuffer(GLenum target, GLuint *buffer, GLsizeiptr memSize, const v
 // Run Gen-Bind Texture(s) and TexImage2D-TexParameteri with some default settings
 // `glGenTextures(1, texture);`
 // `glBindTexture(GL_TEXTURE_2D, *texture);`
-// `glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);`
+// `glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);`
 // `glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);`
 // `glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);`
 void glGBIPTexture2D(GLuint *texture, int w, int h)
@@ -164,6 +169,36 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         testCloseToZero = comparator::min(0.1, comparator::max(0, testCloseToZero - testCloseToZeroDelta));
         std::cout << "CloseToZero: " << testCloseToZero << std::endl;
     }
+    else if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+    {
+        sdCount = 1;
+        std::cout << "sdCount: " << sdCount << std::endl;
+    }
+    else if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+    {
+        sdCount = 2;
+        std::cout << "sdCount: " << sdCount << std::endl;
+    }
+    else if (key == GLFW_KEY_3 && action == GLFW_PRESS)
+    {
+        sdCount = 3;
+        std::cout << "sdCount: " << sdCount << std::endl;
+    }
+    else if (key == GLFW_KEY_4 && action == GLFW_PRESS)
+    {
+        sdCount = 4;
+        std::cout << "sdCount: " << sdCount << std::endl;
+    }
+    else if (key == GLFW_KEY_5 && action == GLFW_PRESS)
+    {
+        sdCount = 5;
+        std::cout << "sdCount: " << sdCount << std::endl;
+    }
+    else if (key == GLFW_KEY_6 && action == GLFW_PRESS)
+    {
+        sdCount = 6;
+        std::cout << "sdCount: " << sdCount << std::endl;
+    }
 }
 
 void pdInit(GLFWwindow *window)
@@ -173,6 +208,8 @@ void pdInit(GLFWwindow *window)
     //
     // Normal & Position program
     //
+
+    std::cout << "--- Normal & Position Program Init ---\n";
 
     normalPositionProgram.loadShader("normalPosition.vert", "normalPosition.frag");
     glUseProgram(normalPositionProgram.programID);
@@ -221,6 +258,7 @@ void pdInit(GLFWwindow *window)
     //
     // umbilic unsolved principal direction
     //
+    std::cout << "--- Principal Direction Program Init ---\n";
 
     pdProgram.loadShader("pd.vert", "pd.frag");
     glUseProgram(pdProgram.programID);
@@ -234,12 +272,12 @@ void pdInit(GLFWwindow *window)
     glDrawBuffers(1, pdTexDrawBuffers);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout
-            << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
     //
-    // try to solve umbolic points - uncompleted
+    // try to solve umbilic points - uncompleted
     //
+    std::cout << "--- Umbilic Solver Program Init ---\n";
 
     usProgram.loadShader("umbolicSolver.vert", "umbolicSolver.frag");
     glUseProgram(usProgram.programID);
@@ -253,17 +291,51 @@ void pdInit(GLFWwindow *window)
     glDrawBuffers(1, usTexDrawBuffers);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout
-            << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
     //
     // smooth direction
     //
+    std::cout << "--- Smooth Direction Program Init ---\n";
+
+    sdProgram.loadShader("smoothingPD.vert", "smoothingPD.frag");
+    glUseProgram(sdProgram.programID);
+
+    glGenFramebuffers(SMOOTHING_COUNT, sdFB);
+    GLint maxAttach;
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxAttach);
+    std::cout << "Max Color Attachments: " << maxAttach << std::endl;
+    // bind framebuffer0 - texture0
+    // bind framebuffer1 - texture1
+    // bind framebuffer2 - texture0
+    // ...
+    glGBIPTexture2D(&sdTexture[0], w, h);
+    glGBIPTexture2D(&sdTexture[1], w, h);
+    for (int i = 0; i < SMOOTHING_COUNT; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, sdFB[i]);
+
+        GLenum attach[1];
+        attach[0] = GL_COLOR_ATTACHMENT4 + i % 2;
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attach[0], GL_TEXTURE_2D, sdTexture[i % 2], 0);
+        glDrawBuffers(1, attach);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "ERROR::FRAMEBUFFER " << i << "-th:: Framebuffer is not complete! Code " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
+    }
+
+    //
+    // test
+    //
+    std::cout << "--- Test Program Init ---\n";
+
+    quadProgram.loadShader("quad.vert", "quad.frag");
+
+    //
+    // quads
+    //
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    testProgram.loadShader("test.vert", "test.frag");
-    glUseProgram(testProgram.programID);
 
     glGenVertexArrays(1, &quadVAO);
     glBindVertexArray(quadVAO);
@@ -297,7 +369,7 @@ void pdRender(GLFWwindow *window)
 
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
-    glm::mat4 projMat = glm::perspective(45 / (float)180 * PI, w / (float)h, 0.01f, 1000.0f);
+    glm::mat4 projMat = glm::perspective(60 / (float)180 * PI, w / (float)h, 0.01f, 1000.0f);
 
     //
     // Normal & Position texture render
@@ -379,31 +451,57 @@ void pdRender(GLFWwindow *window)
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, pdTexture);
 
-    OFFSETLoc = glGetUniformLocation(usProgram.programID, "OFFSET");
-    glUniform1f(OFFSETLoc, testOffset);
     enableCaseTestLoc = glGetUniformLocation(usProgram.programID, "enableCaseTest");
     glUniform1i(enableCaseTestLoc, enableCaseTest);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    // test render
+    //
+    // smoothing pd
+    //
 
-    glUseProgram(testProgram.programID);
+    glUseProgram(sdProgram.programID);
+
+    for (int i = 0; i < sdCount; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, sdFB[i]);
+        glBindVertexArray(quadVAO);
+
+        glViewport(0, 0, w, h);
+
+        glClearColor(0.0, 0.0, 0.0, 0.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        GLuint testTexLoc = glGetUniformLocation(sdProgram.programID, "tex");
+        glUniform1i(testTexLoc, 3 + i % 2);
+        glActiveTexture(GL_TEXTURE3 + i % 2);
+        GLuint tex = i == 0 ? usTexture : sdTexture[(i - 1) % 2];
+        glBindTexture(GL_TEXTURE_2D, tex);
+
+        GLuint positionTexLoc = glGetUniformLocation(sdProgram.programID, "positionTex");
+        glUniform1i(positionTexLoc, 0);
+
+        GLuint inverseSizeLoc = glGetUniformLocation(sdProgram.programID, "inverseSize");
+        glm::vec2 inverseSize(1 / (float)w, 1 / (float)h);
+        glUniform2fv(inverseSizeLoc, 1, glm::value_ptr(inverseSize));
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+    glUseProgram(quadProgram.programID);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
     glBindVertexArray(quadVAO);
 
     glViewport(0, 0, w, h);
 
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT);
-    glDisable(GL_DEPTH_TEST);
 
-    GLuint testTexLoc = glGetUniformLocation(testProgram.programID, "tex");
-    glUniform1i(testTexLoc, 3);
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, usTexture);
+    GLuint quadTexLoc = glGetUniformLocation(quadProgram.programID, "tex");
+    glUniform1i(quadTexLoc, 5);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, sdTexture[(sdCount - 1) % 2]);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
 

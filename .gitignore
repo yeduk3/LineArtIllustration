@@ -3,3 +3,4 @@ dependencies/include/GL*
 dependencies/library/lib*
 main.dSYM*
 main
+.clang-format

@@ -13,7 +13,11 @@ struct Program
 {
     GLuint programID = 0;
     GLuint vertexShaderID = 0;
+    std::string vertexShaderName = "";
+    GLuint geomShaderID = 0;
+    std::string fragShaderName = "";
     GLuint fragShaderID = 0;
+    std::string geomShaderName = "";
 
     std::string loadText(const char *filename)
     {
@@ -28,8 +32,77 @@ struct Program
         return std::string(begin, end);
     }
 
+    bool shaderCompileCheck(GLuint shaderID)
+    {
+        GLint isCompiled = 0;
+        glGetShaderiv(shaderID, GL_COMPILE_STATUS, &isCompiled);
+        if (isCompiled == GL_FALSE)
+        {
+            GLint maxLength = 0;
+            glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &maxLength);
+
+            // The maxLength includes the NULL character
+            std::vector<GLchar> errorLog(maxLength);
+            glGetShaderInfoLog(shaderID, maxLength, &maxLength, &errorLog[0]);
+
+            for (auto e : errorLog)
+            {
+                std::cout << e;
+            }
+            std::cout << std::endl;
+
+            // Provide the infolog in whatever manor you deem best.
+            // Exit with failure.
+            glDeleteShader(shaderID); // Don't leak the shader.
+            return false;
+        }
+        std::cout << "Shader ID " << shaderID << " compile successed.\n";
+        return true;
+    }
+
+    void loadShaderByText(const std::string &vShaderText, const std::string &fShaderText)
+    {
+        // Create Program
+        programID = glCreateProgram();
+        std::cout << "Program " << programID << " created" << std::endl;
+
+        // Create Shader by its type
+        vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+        fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+
+        // Vertex Shader
+        const GLchar *vShaderCode = vShaderText.c_str();
+        glShaderSource(vertexShaderID, 1, &vShaderCode, 0);
+        glCompileShader(vertexShaderID);
+        if (shaderCompileCheck(vertexShaderID))
+            glAttachShader(programID, vertexShaderID);
+        else
+        {
+            cleanUp();
+            return;
+        }
+        std::cout << "Vertex Shader: " << vertexShaderName << "(" << vShaderText.length() << ") created with ID " << vertexShaderID << std::endl;
+
+        // Fragment Shader
+        const GLchar *fShaderCode = fShaderText.c_str();
+        glShaderSource(fragShaderID, 1, &fShaderCode, 0);
+        glCompileShader(fragShaderID);
+        if (shaderCompileCheck(fragShaderID))
+            glAttachShader(programID, fragShaderID);
+        else
+        {
+            cleanUp();
+            return;
+        }
+        std::cout << "Fragment Shader: " << fragShaderName << "(" << fShaderText.length() << ") created with ID " << fragShaderID << std::endl;
+
+        linkShader();
+    }
     void loadShader(const char *vShaderFile, const char *fShaderFile)
     {
+        vertexShaderName = std::string(vShaderFile);
+        fragShaderName = std::string(fShaderFile);
+
         cleanUp();
 
         // Read Shader File
@@ -44,30 +117,67 @@ struct Program
         }
         std::string fShaderText = loadText(fShaderFile);
 
-        // Create Program
-        programID = glCreateProgram();
-        // Create Shader by its type
-        vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-        fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+        loadShaderByText(vShaderText, fShaderText);
+    }
 
-        // 쉐이더 아이디에 코드 등록.
-        // 두번쨰 인자를 통해 코드가 여러 개 들어올 수 있다. 따라서 코드의 포인터를 넣는 것.
-        // 소스 등록 -> 컴파일 -> 붙이기
-        const GLchar *vShaderCode = vShaderText.c_str();
-        glShaderSource(vertexShaderID, 1, &vShaderCode, 0);
-        glCompileShader(vertexShaderID);
-        glAttachShader(programID, vertexShaderID);
+    // This function doesn't include linking.
+    void loadGeomShader(const char *gShaderFile)
+    {
+        geomShaderName = std::string(gShaderFile);
 
-        const GLchar *fShaderCode = fShaderText.c_str();
-        glShaderSource(fragShaderID, 1, &fShaderCode, 0);
-        glCompileShader(fragShaderID);
-        glAttachShader(programID, fragShaderID);
+        std::string gShaderText = loadText(gShaderFile);
 
+        geomShaderID = glCreateShader(GL_GEOMETRY_SHADER);
+
+        const GLchar *gShaderCode = gShaderText.c_str();
+        glShaderSource(geomShaderID, 1, &gShaderCode, 0);
+        glCompileShader(geomShaderID);
+        glAttachShader(programID, geomShaderID);
+
+        std::cout << "Geometry Shader: " << geomShaderName << "(" << gShaderText.length() << ") created with ID " << geomShaderID << std::endl;
+    }
+
+    void loadShader(const char *vShaderFile, const char *gShaderFile, const char *fShaderFile)
+    {
+        loadGeomShader(gShaderFile);
+        loadShader(vShaderFile, fShaderFile);
+    }
+
+    void printLog()
+    {
+        GLint maxLength = 0;
+        glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &maxLength);
+
+        // The maxLength includes the NULL character
+        std::vector<GLchar> errorLog(maxLength);
+        glGetProgramInfoLog(programID, maxLength, &maxLength, &errorLog[0]);
+
+        for (auto e : errorLog)
+        {
+            std::cout << e;
+        }
+        std::cout << std::endl;
+    }
+
+    void linkShader()
+    {
         // 다 붙이면 링크 후 사용 등록
         glLinkProgram(programID);
-        glUseProgram(programID);
+        GLint linkStatus;
+        glGetProgramiv(programID, GL_LINK_STATUS, &linkStatus);
+        if (linkStatus == GL_FALSE)
+        {
+            std::cerr << "Shader Link Error on Program ID " << programID << "!!!!!!\n";
 
-        std::cout << "Program " << programID << " created" << std::endl;
+            printLog();
+
+            return;
+        }
+        else
+        {
+            std::cout << "Shader Link Success on Program ID " << programID << std::endl;
+        }
+        glUseProgram(programID);
     }
     void cleanUp()
     {
@@ -76,11 +186,13 @@ struct Program
             glDeleteProgram(programID);
         if (vertexShaderID)
             glDeleteShader(vertexShaderID);
+        if (geomShaderID)
+            glDeleteShader(geomShaderID);
         if (fragShaderID)
             glDeleteShader(fragShaderID);
 
         // value reset
-        programID = vertexShaderID = fragShaderID = 0;
+        programID = vertexShaderID = geomShaderID = fragShaderID = 0;
     }
     ~Program()
     {

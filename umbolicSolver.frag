@@ -6,7 +6,7 @@ in vec2 texCoords;
 
 uniform sampler2D pdTexture;
 
-uniform float OFFSET;
+const float OFFSET = 0.04;
 uniform bool enableCaseTest;
 
 bool texInRange(vec2 texCoord)
@@ -32,7 +32,7 @@ void main()
         {
             // find 4 neighboring, not umbilic, points
             vec2 neighbor;
-            vec2 direction[4] = vec2[4](vec2(0, 0.01), vec2(0.01, 0), vec2(0, -0.01 * 10), vec2(-0.01, 0));
+            vec2 direction[4] = vec2[4](vec2(0, OFFSET), vec2(OFFSET, 0), vec2(0, -OFFSET * 10), vec2(-OFFSET, 0));
 
             vec4 sum = vec4(0);
             int count = 0;
