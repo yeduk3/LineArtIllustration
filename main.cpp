@@ -1,16 +1,20 @@
+//
+//  main.cpp
+//  LineArtIllustrationXCode
+//
+//  Created by 이용규 on 3/7/25.
+//
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
-#include <iostream>
-
-// #include <intensity_map.hpp>
-// #include <tam_generator.hpp>
-
-#include <myprogram.hpp>
-#include <objreader.hpp>
+#include <OpenGL/gl.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <iostream>
+
+#include "myprogram.hpp"
+#include "objreader.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
@@ -64,20 +68,15 @@ GLuint quadVBO;
 
 float quadVertices[] = {
     // positions   // texCoords
-    -1.0f, 1.0f, 0.0f, 1.0f,
-    -1.0f, -1.0f, 0.0f, 0.0f,
-    1.0f, -1.0f, 1.0f, 0.0f,
+    -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f,
 
-    -1.0f, 1.0f, 0.0f, 1.0f,
-    1.0f, -1.0f, 1.0f, 0.0f,
-    1.0f, 1.0f, 1.0f, 1.0f};
+    -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f};
 
 // Run Gen-Bind-Data Buffer with GL_STATIC_DRAW
 // `glGenBuffers(1, buffer);`
 // `glBindBuffer(target, *buffer);`
 // `glBufferData(target, memSize, data, GL_STATIC_DRAW);`
-void glGBDArrayBuffer(GLenum target, GLuint *buffer, GLsizeiptr memSize, const void *data)
-{
+void glGBDArrayBuffer(GLenum target, GLuint *buffer, GLsizeiptr memSize, const void *data) {
     glGenBuffers(1, buffer);
     glBindBuffer(target, *buffer);
     glBufferData(target, memSize, data, GL_STATIC_DRAW);
@@ -89,8 +88,7 @@ void glGBDArrayBuffer(GLenum target, GLuint *buffer, GLsizeiptr memSize, const v
 // `glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);`
 // `glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);`
 // `glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);`
-void glGBIPTexture2D(GLuint *texture, int w, int h)
-{
+void glGBIPTexture2D(GLuint *texture, int w, int h) {
     glGenTextures(1, texture);
     glBindTexture(GL_TEXTURE_2D, *texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
@@ -103,32 +101,23 @@ void glGBIPTexture2D(GLuint *texture, int w, int h)
 const float PI = 3.14159265358979323846f;
 float cameraTheta(0), cameraPhi(0);
 
-namespace comparator
-{
-    float min(const float &a, const float &b)
-    {
-        return a > b ? b : a;
-    }
-    float max(const float &a, const float &b)
-    {
-        return a > b ? a : b;
-    }
-}
+namespace comparator {
+float min(const float &a, const float &b) { return a > b ? b : a; }
+float max(const float &a, const float &b) { return a > b ? a : b; }
+}  // namespace comparator
 
-void cursorPosCallback(GLFWwindow *window, double xpos, double ypos)
-{
+void cursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
     static double lastX = 0;
     static double lastY = 0;
     // when left mouse button clicked
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1))
-    {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1)) {
         double dx = xpos - lastX;
         double dy = ypos - lastY;
         int w, h;
         glfwGetWindowSize(window, &w, &h);
         // rotate 180 degree per each width/height dragging
-        cameraTheta -= dx / w * PI; // related with y-axis rotation
-        cameraPhi -= dy / h * PI;   // related with x-axis rotation
+        cameraTheta -= dx / w * PI;  // related with y-axis rotation
+        cameraPhi -= dy / h * PI;    // related with x-axis rotation
         cameraPhi = comparator::max(-PI / 2 + 0.01f, comparator::min(cameraPhi, PI / 2 - 0.01f));
         // printf("%.3f %.3f\n", cameraTheta, cameraPhi);
     }
@@ -143,67 +132,44 @@ bool enableCaseTest = false;
 float testCloseToZero = 0.0005;
 float testCloseToZeroDelta = 0.0001;
 
-void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_RIGHT && action > GLFW_RELEASE)
-    {
+void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_RIGHT && action > GLFW_RELEASE) {
         testOffset = comparator::min(0.1, comparator::max(0, testOffset + testOffsetDelta));
         std::cout << "Offset: " << testOffset << std::endl;
-    }
-    else if (key == GLFW_KEY_LEFT && action > GLFW_RELEASE)
-    {
+    } else if (key == GLFW_KEY_LEFT && action > GLFW_RELEASE) {
         testOffset = comparator::min(0.1, comparator::max(0, testOffset - testOffsetDelta));
         std::cout << "Offset: " << testOffset << std::endl;
-    }
-    else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-    {
+    } else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
         enableCaseTest = !enableCaseTest;
-    }
-    else if (key == GLFW_KEY_UP && action > GLFW_RELEASE)
-    {
+    } else if (key == GLFW_KEY_UP && action > GLFW_RELEASE) {
         testCloseToZero = comparator::min(0.1, comparator::max(0, testCloseToZero + testCloseToZeroDelta));
         std::cout << "CloseToZero: " << testCloseToZero << std::endl;
-    }
-    else if (key == GLFW_KEY_DOWN && action > GLFW_RELEASE)
-    {
+    } else if (key == GLFW_KEY_DOWN && action > GLFW_RELEASE) {
         testCloseToZero = comparator::min(0.1, comparator::max(0, testCloseToZero - testCloseToZeroDelta));
         std::cout << "CloseToZero: " << testCloseToZero << std::endl;
-    }
-    else if (key == GLFW_KEY_1 && action == GLFW_PRESS)
-    {
+    } else if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
         sdCount = 1;
         std::cout << "sdCount: " << sdCount << std::endl;
-    }
-    else if (key == GLFW_KEY_2 && action == GLFW_PRESS)
-    {
+    } else if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
         sdCount = 2;
         std::cout << "sdCount: " << sdCount << std::endl;
-    }
-    else if (key == GLFW_KEY_3 && action == GLFW_PRESS)
-    {
+    } else if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
         sdCount = 3;
         std::cout << "sdCount: " << sdCount << std::endl;
-    }
-    else if (key == GLFW_KEY_4 && action == GLFW_PRESS)
-    {
+    } else if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
         sdCount = 4;
         std::cout << "sdCount: " << sdCount << std::endl;
-    }
-    else if (key == GLFW_KEY_5 && action == GLFW_PRESS)
-    {
+    } else if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
         sdCount = 5;
         std::cout << "sdCount: " << sdCount << std::endl;
-    }
-    else if (key == GLFW_KEY_6 && action == GLFW_PRESS)
-    {
+    } else if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
         sdCount = 6;
         std::cout << "sdCount: " << sdCount << std::endl;
     }
 }
 
-void pdInit(GLFWwindow *window)
-{
-    obj.loadObject("obj/", "teapot.obj");
+void pdInit(GLFWwindow *window) {
+    obj.loadObject("obj", "teapot.obj");
 
     //
     // Normal & Position program
@@ -227,7 +193,8 @@ void pdInit(GLFWwindow *window)
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
 
-    glGBDArrayBuffer(GL_ELEMENT_ARRAY_BUFFER, &vertexElement, sizeof(glm::u16vec3) * obj.nElements3, obj.elements3.data());
+    glGBDArrayBuffer(GL_ELEMENT_ARRAY_BUFFER, &vertexElement, sizeof(glm::u16vec3) * obj.nElements3,
+                     obj.elements3.data());
 
     // framebuffer
 
@@ -311,8 +278,7 @@ void pdInit(GLFWwindow *window)
     // ...
     glGBIPTexture2D(&sdTexture[0], w, h);
     glGBIPTexture2D(&sdTexture[1], w, h);
-    for (int i = 0; i < SMOOTHING_COUNT; i++)
-    {
+    for (int i = 0; i < SMOOTHING_COUNT; i++) {
         glBindFramebuffer(GL_FRAMEBUFFER, sdFB[i]);
 
         GLenum attach[1];
@@ -321,7 +287,8 @@ void pdInit(GLFWwindow *window)
         glDrawBuffers(1, attach);
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            std::cout << "ERROR::FRAMEBUFFER " << i << "-th:: Framebuffer is not complete! Code " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
+            std::cout << "ERROR::FRAMEBUFFER " << i << "-th:: Framebuffer is not complete! Code "
+                      << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
     }
 
     //
@@ -353,13 +320,8 @@ void pdInit(GLFWwindow *window)
 // render
 //
 
-void pdRender(GLFWwindow *window)
-{
-
-    glm::mat4 modelMat = glm::mat4({{1, 0, 0, 0},
-                                    {0, 1, 0, 0},
-                                    {0, 0, 1, 0},
-                                    {0, -1.5, 0, 1}});
+void pdRender(GLFWwindow *window) {
+    glm::mat4 modelMat = glm::mat4({{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, -1.5, 0, 1}});
     // modelMat = glm::scale(glm::vec3(0.01)) * modelMat;
     glm::mat4 rotateX = glm::rotate(cameraPhi, glm::vec3(1, 0, 0));
     glm::mat4 rotateY = glm::rotate(cameraTheta, glm::vec3(0, 1, 0));
@@ -462,8 +424,16 @@ void pdRender(GLFWwindow *window)
 
     glUseProgram(sdProgram.programID);
 
-    for (int i = 0; i < sdCount; i++)
-    {
+    GLuint index = glGetSubroutineUniformLocation(sdProgram.programID, GL_FRAGMENT_SHADER, "renderPass");
+    if (index == -1) {
+        std::cout << "Subroutine indexing error" << std::endl;
+        return;
+    }
+
+    GLuint pass2 = glGetSubroutineIndex(sdProgram.programID, GL_FRAGMENT_SHADER, "pass2");
+    glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &pass2);
+
+    for (int i = 0; i < sdCount; i++) {
         glBindFramebuffer(GL_FRAMEBUFFER, sdFB[i]);
         glBindVertexArray(quadVAO);
 
@@ -512,18 +482,15 @@ void pdRender(GLFWwindow *window)
 // main
 //
 
-int main()
-{
-
+int main() {
     // init
 
-    if (!glfwInit())
-    {
+    if (!glfwInit()) {
         std::cout << "GLFW Init Failed" << std::endl;
         return -1;
     }
 
-// MacOS Setting
+    // MacOS Setting
 #ifdef __APPLE__
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
@@ -534,8 +501,7 @@ int main()
     GLFWwindow *window = glfwCreateWindow(640, 480, "Line Art Illustration", 0, 0);
     glfwMakeContextCurrent(window);
 
-    if (glewInit() != GLEW_OK)
-    {
+    if (glewInit() != GLEW_OK) {
         std::cout << "GLEW Init Failed" << std::endl;
         return -1;
     }
@@ -548,8 +514,7 @@ int main()
 
     // render
 
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         // render(window);
         pdRender(window);
         glfwPollEvents();

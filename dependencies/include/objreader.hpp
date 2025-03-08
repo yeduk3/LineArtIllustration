@@ -2,15 +2,13 @@
 
 #pragma once
 
-#include <GL/glew.h> // GLuint
+#include <GL/glew.h>  // GLuint
 
-#include <glm/glm.hpp> // vec3
-
-#include <vector>
+#include <glm/glm.hpp>  // vec3
 #include <iostream>
+#include <vector>
 
-struct MtlData
-{
+struct MtlData {
     std::string materialName;
 
     glm::vec3 ambientColor;
@@ -19,8 +17,7 @@ struct MtlData
 
     MtlData(const std::string mName) : materialName(mName) {}
 
-    friend std::ostream &operator<<(std::ostream &os, const MtlData &mtl)
-    {
+    friend std::ostream &operator<<(std::ostream &os, const MtlData &mtl) {
         os << "Material Name: " << mtl.materialName << std::endl;
         os << "Ambient: " << mtl.ambientColor.r << " " << mtl.ambientColor.g << " " << mtl.ambientColor.b << std::endl;
         os << "Diffuse: " << mtl.diffuseColor.r << " " << mtl.diffuseColor.g << " " << mtl.diffuseColor.b << std::endl;
@@ -29,8 +26,8 @@ struct MtlData
     }
 };
 
-struct ObjData
-{
+struct ObjData {
+    std::string prefix = "";
     std::string materialFile = "";
     std::string material = "";
     GLuint nVertices = 0;
@@ -38,6 +35,7 @@ struct ObjData
     GLuint nElements4 = 0;
     GLuint nNormals = 0;
     GLuint nSyncedNormals = 0;
+    bool isOk;
 
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec2> textures;
@@ -48,6 +46,8 @@ struct ObjData
 
     std::vector<MtlData> materialData;
 
-    void loadMtl(const std::string mtlFileName);
-    void loadObject(const std::string prefix, const std::string objFileName);
+    void setPrefix(const std::string &prefixName);
+    void loadMtl(const std::string &mtlFileName);
+    void loadObject(const std::string &objFileName);
+    void loadObject(const std::string &prefixName, const std::string &objFileName);
 };
